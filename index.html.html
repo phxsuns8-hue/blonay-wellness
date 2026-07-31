@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blonay Basket - Suivi Wellness & Readiness U16/U18</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .score-btn.active-1 { background-color: #ef4444; color: white; border-color: #dc2626; }
+        .score-btn.active-2 { background-color: #f97316; color: white; border-color: #ea580c; }
+        .score-btn.active-3 { background-color: #eab308; color: white; border-color: #ca8a04; }
+        .score-btn.active-4 { background-color: #84cc16; color: white; border-color: #65a30d; }
+        .score-btn.active-5 { background-color: #22c55e; color: white; border-color: #16a34a; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+    <!-- Navigation Header -->
+    <header class="bg-blue-950 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-orange-600 text-white font-black text-xl w-10 h-10 rounded-full flex items-center justify-center shadow">
+                    🏀
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg leading-tight">Blonay Basket</h1>
+                    <p class="text-xs text-blue-200">Suivi Quotidien Wellness & Forme U16 / U18 National</p>
+                </div>
+            </div>
+
+            <!-- View Toggle Buttons -->
+            <div class="flex items-center gap-2 bg-blue-900/60 p-1 rounded-xl border border-blue-800">
+                <button id="nav-player-btn" onclick="switchTab('player')" class="px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all">
+                    📋 Espace Joueuse
+                </button>
+                <button id="nav-coach-btn" onclick="switchTab('coach')" class="px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all">
+                    📊 Dashboard Coach
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 md:p-6">
+
+        <!-- SECTION 1: ATHLETE QUESTIONNAIRE -->
+        <section id="tab-player" class="space-y-6">
+            
+            <!-- Welcome Card -->
+            <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-5 rounded-2xl shadow-md border border-blue-800">
+                <h2 class="text-xl font-bold mb-1">Bonjour Joueuse ! 👋</h2>
+                <p class="text-xs md:text-sm text-blue-100 leading-relaxed">
+                    Prends <strong class="text-orange-300">45 secondes</strong> pour remplir ton bilan quotidien avant l'entraînement. Sois 100% honnête : cela permet au préparateur physique d'adapter tes séances et d'éviter les blessures !
+                </p>
+            </div>
+
+            <form id="wellness-form" onsubmit="handleFormSubmit(event)" class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                
+                <!-- Player Identification -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Catégorie / Équipe</label>
+                        <select id="player-category" onchange="updatePlayerDropdown()" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-900 outline-none">
+                            <option value="U16">U16 Féminines National</option>
+                            <option value="U18">U18 Féminines National</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nom & Prénom</label>
+                        <select id="player-name" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-900 outline-none">
+                            <!-- Populated dynamically via JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date du Bilan</label>
+                        <input type="date" id="survey-date" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-900 outline-none">
+                    </div>
+                </div>
+
+                <!-- Question 1: Sommeil -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <span>😴</span> 1. Comment as-tu dormi la nuit dernière ?
+                        </label>
+                        <span id="label-q1" class="text-xs font-semibold text-slate-500">Non sélectionné</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2">
+                        <button type="button" onclick="setRating('q1', 1, 'Insomnie / < 6h')" class="score-btn q1-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>😫</span><span class="text-[10px] mt-1 font-normal">1 - Très Mauvais</span>
+                        </button>
+                        <button type="button" onclick="setRating('q1', 2, 'Agité / 6-7h')" class="score-btn q1-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🙁</span><span class="text-[10px] mt-1 font-normal">2 - Faible</span>
+                        </button>
+                        <button type="button" onclick="setRating('q1', 3, 'Correct / 7-8h')" class="score-btn q1-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>😐</span><span class="text-[10px] mt-1 font-normal">3 - Moyen</span>
+                        </button>
+                        <button type="button" onclick="setRating('q1', 4, 'Bien reposée / 8-9h')" class="score-btn q1-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🙂</span><span class="text-[10px] mt-1 font-normal">4 - Bon</span>
+                        </button>
+                        <button type="button" onclick="setRating('q1', 5, 'Sommeil très profond / > 9h')" class="score-btn q1-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🤩</span><span class="text-[10px] mt-1 font-normal">5 - Optimal</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Question 2: Énergie -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <span>⚡</span> 2. Quel est ton niveau d'énergie au réveil ?
+                        </label>
+                        <span id="label-q2" class="text-xs font-semibold text-slate-500">Non sélectionné</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2">
+                        <button type="button" onclick="setRating('q2', 1, 'Épuisement total')" class="score-btn q2-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🔋1</span><span class="text-[10px] mt-1 font-normal">Épuisée</span>
+                        </button>
+                        <button type="button" onclick="setRating('q2', 2, 'Grande fatigue')" class="score-btn q2-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🔋2</span><span class="text-[10px] mt-1 font-normal">Fatiguée</span>
+                        </button>
+                        <button type="button" onclick="setRating('q2', 3, 'Forme normale')" class="score-btn q2-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🔋3</span><span class="text-[10px] mt-1 font-normal">Normale</span>
+                        </button>
+                        <button type="button" onclick="setRating('q2', 4, 'Bonne forme')" class="score-btn q2-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🔋4</span><span class="text-[10px] mt-1 font-normal">Bonne</span>
+                        </button>
+                        <button type="button" onclick="setRating('q2', 5, 'Pleine énergie / Dynamique')" class="score-btn q2-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🔋5</span><span class="text-[10px] mt-1 font-normal">Pleine forme</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Question 3: Courbatures -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <span>🦵</span> 3. Comment ressens-tu tes muscles et articulations ?
+                        </label>
+                        <span id="label-q3" class="text-xs font-semibold text-slate-500">Non sélectionné</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2">
+                        <button type="button" onclick="setRating('q3', 1, 'Douleurs intenses / Raideur')" class="score-btn q3-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🔴 1</span><span class="text-[10px] mt-1 font-normal">Très mal</span>
+                        </button>
+                        <button type="button" onclick="setRating('q3', 2, 'Courbatures marquées')" class="score-btn q3-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🟠 2</span><span class="text-[10px] mt-1 font-normal">Courbatures</span>
+                        </button>
+                        <button type="button" onclick="setRating('q3', 3, 'Légères tensions')" class="score-btn q3-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🟡 3</span><span class="text-[10px] mt-1 font-normal">Léger</span>
+                        </button>
+                        <button type="button" onclick="setRating('q3', 4, 'Aucune douleur / Souple')" class="score-btn q3-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🟢 4</span><span class="text-[10px] mt-1 font-normal">Très bien</span>
+                        </button>
+                        <button type="button" onclick="setRating('q3', 5, 'Musculature très fraîche')" class="score-btn q3-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🟢 5</span><span class="text-[10px] mt-1 font-normal">Parfait</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Question 4: Stress -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <span>🧠</span> 4. Quel est ton niveau de stress (école / examens / perso) ?
+                        </label>
+                        <span id="label-q4" class="text-xs font-semibold text-slate-500">Non sélectionné</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2">
+                        <button type="button" onclick="setRating('q4', 1, 'Stress extrême / Anxiété')" class="score-btn q4-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🤯 1</span><span class="text-[10px] mt-1 font-normal">Extrême</span>
+                        </button>
+                        <button type="button" onclick="setRating('q4', 2, 'Tendue / Irritée')" class="score-btn q4-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>Très tendue</span><span class="text-[10px] mt-1 font-normal">2 - Élevé</span>
+                        </button>
+                        <button type="button" onclick="setRating('q4', 3, 'Stress modéré')" class="score-btn q4-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>Modéré</span><span class="text-[10px] mt-1 font-normal">3 - Moyen</span>
+                        </button>
+                        <button type="button" onclick="setRating('q4', 4, 'Calme / Positive')" class="score-btn q4-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>Calme</span><span class="text-[10px] mt-1 font-normal">4 - Bon</span>
+                        </button>
+                        <button type="button" onclick="setRating('q4', 5, 'Sérénité totale / Détendue')" class="score-btn q4-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>Zen</span><span class="text-[10px] mt-1 font-normal">5 - Parfait</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Question 5: Nutrition -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <span>🥗</span> 5. Comment évalues-tu ton appétit et ton hydratation ?
+                        </label>
+                        <span id="label-q5" class="text-xs font-semibold text-slate-500">Non sélectionné</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2">
+                        <button type="button" onclick="setRating('q5', 1, 'Repas sautés / Déshydratée')" class="score-btn q5-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🚫 1</span><span class="text-[10px] mt-1 font-normal">Mauvais</span>
+                        </button>
+                        <button type="button" onclick="setRating('q5', 2, 'Peu d\'appétit / Peu bu')" class="score-btn q5-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>⚠️ 2</span><span class="text-[10px] mt-1 font-normal">Insuffisant</span>
+                        </button>
+                        <button type="button" onclick="setRating('q5', 3, 'Correct / Repas normaux')" class="score-btn q5-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🆗 3</span><span class="text-[10px] mt-1 font-normal">Correct</span>
+                        </button>
+                        <button type="button" onclick="setRating('q5', 4, 'Bon appétit / Bien hydratée')" class="score-btn q5-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>👍 4</span><span class="text-[10px] mt-1 font-normal">Bon</span>
+                        </button>
+                        <button type="button" onclick="setRating('q5', 5, 'Nutrition & hydratation idéales')" class="score-btn q5-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all hover:border-slate-400 flex flex-col items-center">
+                            <span>🥇 5</span><span class="text-[10px] mt-1 font-normal">Parfait</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Qualitative Section: Pain & Injury -->
+                <div class="pt-4 border-t border-slate-100 space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-900 mb-1">
+                            🏥 Ressens-tu une douleur ou une gêne physique particulière aujourd'hui ?
+                        </label>
+                        <div class="flex items-center gap-4 mt-2">
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
+                                <input type="radio" name="has_pain" value="Non" checked onclick="togglePainArea(false)" class="w-4 h-4 text-blue-900">
+                                🟢 Non, aucune douleur
+                            </label>
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
+                                <input type="radio" name="has_pain" value="Oui" onclick="togglePainArea(true)" class="w-4 h-4 text-red-600">
+                                🔴 Oui, j'ai une gêne
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Hidden Pain Options -->
+                    <div id="pain-details" class="hidden bg-red-50 p-4 rounded-xl border border-red-200 space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-red-900 uppercase mb-1">Zone de Douleur</label>
+                                <select id="pain-location" class="w-full p-2 bg-white border border-red-300 rounded-lg text-sm text-slate-800">
+                                    <option value="Genou (LCA / Rotulien)">Genou (LCA / Rotulien)</option>
+                                    <option value="Cheville / Pied">Cheville / Tendon d'Achille</option>
+                                    <option value="Ischios / Cuisse">Ischios-Jambiers / Quadriceps</option>
+                                    <option value="Épaule / Bras">Épaule / Poignet</option>
+                                    <option value="Dos / Lombaire">Bas du dos / Lombaire</option>
+                                    <option value="Autre">Autre zone</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-red-900 uppercase mb-1">Intensité de Douleur (0 à 10)</label>
+                                <input type="number" id="pain-intensity" min="1" max="10" value="3" class="w-full p-2 bg-white border border-red-300 rounded-lg text-sm font-bold text-slate-800">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Score Preview Card -->
+                <div id="score-preview" class="bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase">Ton Score de Forme du Jour</p>
+                        <p class="text-2xl font-black text-white"><span id="preview-total-score">0</span> / 25 pts</p>
+                    </div>
+                    <div id="preview-badge" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-slate-300">
+                        Remplis le questionnaire
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-extrabold text-base py-3.5 px-6 rounded-xl shadow-md transition-all">
+                    🚀 Envoyer mon bilan Wellness
+                </button>
+            </form>
+        </section>
+
+        <!-- SECTION 2: COACH DASHBOARD -->
+        <section id="tab-coach" class="hidden space-y-6">
+            
+            <!-- Dashboard Overview Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-xs font-bold text-slate-500 uppercase">Joueuses Évaluées</p>
+                    <p id="kpi-count" class="text-2xl font-black text-blue-900 mt-1">0 / 15</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-xs font-bold text-slate-500 uppercase">Moyenne Équipe</p>
+                    <p id="kpi-avg" class="text-2xl font-black text-emerald-600 mt-1">-- / 25</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-xs font-bold text-slate-500 uppercase">Alertes Zone Rouge</p>
+                    <p id="kpi-red" class="text-2xl font-black text-red-600 mt-1">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-xs font-bold text-slate-500 uppercase">Gênes / Douleurs</p>
+                    <p id="kpi-pain" class="text-2xl font-black text-orange-600 mt-1">0</p>
+                </div>
+            </div>
+
+            <!-- Filters & Actions -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-600 uppercase">Filtrer:</span>
+                    <select id="filter-team" onchange="renderDashboardTable()" class="p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-800">
+                        <option value="ALL">Toutes les équipes</option>
+                        <option value="U16">U16 National</option>
+                        <option value="U18">U18 National</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openRosterModal()" class="px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs rounded-lg transition-all shadow-sm flex items-center gap-1">
+                        ⚙️ Gérer les Joueuses
+                    </button>
+                    <button onclick="exportToCSV()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg transition-all">
+                        📥 Exporter CSV (Excel)
+                    </button>
+                    <button onclick="loadDemoData()" class="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold text-xs rounded-lg transition-all">
+                        🔄 Charger Démos
+                    </button>
+                    <button onclick="clearAllData()" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-lg border border-red-200 transition-all">
+                        🗑️ Effacer Données
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal: Roster Management -->
+            <div id="roster-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="bg-blue-950 text-white p-4 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-base">⚙️ Gestion des Effectifs (Joueuses)</h3>
+                            <p class="text-xs text-blue-200">Ajouter ou supprimer des joueuses U16 / U18</p>
+                        </div>
+                        <button onclick="closeRosterModal()" class="text-blue-200 hover:text-white font-bold text-xl px-2">✕</button>
+                    </div>
+
+                    <div class="p-5 overflow-y-auto space-y-4">
+                        <!-- Add Player Form -->
+                        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                            <h4 class="text-xs font-bold text-slate-700 uppercase">Ajouter une Joueuse</h4>
+                            <div class="flex gap-2">
+                                <select id="new-player-team" class="p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800">
+                                    <option value="U16">U16 National</option>
+                                    <option value="U18">U18 National</option>
+                                </select>
+                                <input type="text" id="new-player-name" placeholder="Nom et Prénom (ex: Sofia Rochat)" class="flex-1 p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900">
+                                <button onclick="addNewPlayer()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all">
+                                    + Ajouter
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Rosters List Display -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- U16 List -->
+                            <div class="border border-slate-200 rounded-xl p-3 bg-white">
+                                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                                    <span class="font-bold text-xs text-blue-900">U16 Féminines (<span id="count-u16">0</span>)</span>
+                                </div>
+                                <ul id="list-u16" class="space-y-1.5 text-xs max-h-48 overflow-y-auto"></ul>
+                            </div>
+
+                            <!-- U18 List -->
+                            <div class="border border-slate-200 rounded-xl p-3 bg-white">
+                                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                                    <span class="font-bold text-xs text-orange-600">U18 Féminines (<span id="count-u18">0</span>)</span>
+                                </div>
+                                <ul id="list-u18" class="space-y-1.5 text-xs max-h-48 overflow-y-auto"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+                        <button onclick="resetRostersToDefault()" class="text-xs text-slate-500 hover:text-slate-800 font-semibold underline">
+                            Réinitialiser effectifs par défaut
+                        </button>
+                        <button onclick="closeRosterModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Readiness Roster Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-900 text-sm">Tableau d'État de Forme Quotidien</h3>
+                    <span class="text-xs text-slate-500">Mise à jour en temps réel</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="p-3">Joueuse</th>
+                                <th class="p-3">Équipe</th>
+                                <th class="p-3">Score / 25</th>
+                                <th class="p-3">Zone de Forme</th>
+                                <th class="p-3">Douleur / Gêne</th>
+                                <th class="p-3">Adaptation Coach Recommandée</th>
+                                <th class="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-tbody" class="divide-y divide-slate-100 text-slate-800 font-medium">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Team Trend Chart -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 class="font-bold text-slate-900 text-sm mb-4">Évolution de la Forme d'Équipe (Score Moyen / 25)</h3>
+                <div class="h-64">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        // Default Rosters for Blonay Basket
+        const DEFAULT_ROSTERS = {
+            U16: [
+                "Camille Favrod", "Emma Rochat", "Sophie Pittet", "Léa Monnard", "Chloé Bernasconi",
+                "Maya Tanner", "Inès Grandjean", "Julie Rochat", "Clara Diserens", "Alice Meylan",
+                "Elena Rossi", "Lucie Mottier", "Zoe Reymond", "Lara Bovard", "Sara Martin"
+            ],
+            U18: [
+                "Charlotte Dépraz", "Laura Jaccard", "Margaux Pasche", "Mélanie Gex", "Anouk Rochat",
+                "Amélie Neyroud", "Nora Jacot", "Eline Crausaz", "Mathilde Vauthey", "Jessica Blanc",
+                "Manon Nicole", "Éléonore Nicole", "Eva Pernet", "Coralie Dufour", "Pauline Jordan"
+            ]
+        };
+
+        // Form ratings state
+        const ratings = { q1: 0, q2: 0, q3: 0, q4: 0, q5: 0 };
+        const ratingLabels = { q1: '', q2: '', q3: '', q4: '', q5: '' };
+
+        // Local Storage Keys
+        const STORAGE_KEY = 'blonay_wellness_records';
+        const ROSTER_KEY = 'blonay_wellness_rosters';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set today's date
+            document.getElementById('survey-date').valueAsDate = new Date();
+            updatePlayerDropdown();
+            initChart();
+            renderDashboardTable();
+        });
+
+        function getRosters() {
+            const saved = localStorage.getItem(ROSTER_KEY);
+            return saved ? JSON.parse(saved) : DEFAULT_ROSTERS;
+        }
+
+        function saveRosters(rosters) {
+            localStorage.setItem(ROSTER_KEY, JSON.stringify(rosters));
+            updatePlayerDropdown();
+            renderRosterModalLists();
+        }
+
+        function switchTab(tab) {
+            const playerSec = document.getElementById('tab-player');
+            const coachSec = document.getElementById('tab-coach');
+            const navPlayerBtn = document.getElementById('nav-player-btn');
+            const navCoachBtn = document.getElementById('nav-coach-btn');
+
+            if (tab === 'player') {
+                playerSec.classList.remove('hidden');
+                coachSec.classList.add('hidden');
+                navPlayerBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all";
+                navCoachBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all";
+            } else {
+                playerSec.classList.add('hidden');
+                coachSec.classList.remove('hidden');
+                navCoachBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all";
+                navPlayerBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all";
+                renderDashboardTable();
+            }
+        }
+
+        function updatePlayerDropdown() {
+            const rosters = getRosters();
+            const cat = document.getElementById('player-category').value;
+            const playerSelect = document.getElementById('player-name');
+            playerSelect.innerHTML = '';
+            
+            const list = rosters[cat] || [];
+            list.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                playerSelect.appendChild(opt);
+            });
+        }
+
+        function openRosterModal() {
+            document.getElementById('roster-modal').classList.remove('hidden');
+            renderRosterModalLists();
+        }
+
+        function closeRosterModal() {
+            document.getElementById('roster-modal').classList.add('hidden');
+        }
+
+        function renderRosterModalLists() {
+            const rosters = getRosters();
+            
+            // U16
+            const listU16 = document.getElementById('list-u16');
+            document.getElementById('count-u16').textContent = rosters.U16.length;
+            listU16.innerHTML = '';
+            rosters.U16.forEach((name, index) => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-slate-50 p-1.5 px-2 rounded border border-slate-200";
+                li.innerHTML = `<span>${name}</span> <button onclick="deletePlayer('U16', ${index})" class="text-red-600 font-bold hover:text-red-800">✕</button>`;
+                listU16.appendChild(li);
+            });
+
+            // U18
+            const listU18 = document.getElementById('list-u18');
+            document.getElementById('count-u18').textContent = rosters.U18.length;
+            listU18.innerHTML = '';
+            rosters.U18.forEach((name, index) => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-slate-50 p-1.5 px-2 rounded border border-slate-200";
+                li.innerHTML = `<span>${name}</span> <button onclick="deletePlayer('U18', ${index})" class="text-red-600 font-bold hover:text-red-800">✕</button>`;
+                listU18.appendChild(li);
+            });
+        }
+
+        function addNewPlayer() {
+            const team = document.getElementById('new-player-team').value;
+            const input = document.getElementById('new-player-name');
+            const name = input.value.trim();
+            
+            if (!name) return;
+
+            const rosters = getRosters();
+            if (!rosters[team].includes(name)) {
+                rosters[team].push(name);
+                saveRosters(rosters);
+                input.value = '';
+            }
+        }
+
+        function deletePlayer(team, index) {
+            const rosters = getRosters();
+            rosters[team].splice(index, 1);
+            saveRosters(rosters);
+        }
+
+        function resetRostersToDefault() {
+            if (confirm("Voulez-vous vraiment réinitialiser les effectifs avec les noms par défaut ?")) {
+                localStorage.removeItem(ROSTER_KEY);
+                updatePlayerDropdown();
+                renderRosterModalLists();
+            }
+        }
+
+        function deleteRecord(id) {
+            if (confirm("Supprimer ce bilan ?")) {
+                let records = getRecords();
+                records = records.filter(r => r.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+                renderDashboardTable();
+            }
+        }
+
+        function clearAllData() {
+            if (confirm("Attention : Voulez-vous vraiment effacer TOUS les bilans enregistrés ?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderDashboardTable();
+            }
+        }
+
+        // ... existing rating set function & form submission ...
+        function setRating(question, value, label) {
+            ratings[question] = value;
+            ratingLabels[question] = label;
+            document.getElementById(`label-${question}`).textContent = `Note : ${value}/5 (${label})`;
+            document.getElementById(`label-${question}`).className = "text-xs font-bold text-blue-900";
+
+            const btns = document.querySelectorAll(`.${question}-btn`);
+            btns.forEach((btn, index) => {
+                btn.className = `score-btn ${question}-btn border border-slate-200 py-3 rounded-xl font-bold text-sm transition-all flex flex-col items-center`;
+                if (index + 1 === value) {
+                    btn.classList.add(`active-${value}`);
+                }
+            });
+
+            calculateTotalPreview();
+        }
+
+        function calculateTotalPreview() {
+            const total = ratings.q1 + ratings.q2 + ratings.q3 + ratings.q4 + ratings.q5;
+            document.getElementById('preview-total-score').textContent = total;
+            
+            const badge = document.getElementById('preview-badge');
+            if (total >= 20) {
+                badge.textContent = "🟢 Zone Verte - Forme Optimale (100% Intensité)";
+                badge.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-white";
+            } else if (total >= 15) {
+                badge.textContent = "🟡 Zone Jaune - Fatigue Modérée (-30% Pliométrie)";
+                badge.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-white";
+            } else if (total > 0) {
+                badge.textContent = "🔴 Zone Rouge - Risque/Épuisement (Focus Récupération)";
+                badge.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 text-white";
+            }
+        }
+
+        function togglePainArea(hasPain) {
+            const painBox = document.getElementById('pain-details');
+            if (hasPain) {
+                painBox.classList.remove('hidden');
+            } else {
+                painBox.classList.add('hidden');
+            }
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            if (ratings.q1 === 0 || ratings.q2 === 0 || ratings.q3 === 0 || ratings.q4 === 0 || ratings.q5 === 0) {
+                alert("Attention : Merci de répondre aux 5 questions de l'évaluation !");
+                return;
+            }
+
+            const category = document.getElementById('player-category').value;
+            const playerName = document.getElementById('player-name').value;
+            const surveyDate = document.getElementById('survey-date').value;
+            const hasPain = document.querySelector('input[name="has_pain"]:checked').value === 'Oui';
+            const painLocation = hasPain ? document.getElementById('pain-location').value : 'Aucune';
+            const painIntensity = hasPain ? parseInt(document.getElementById('pain-intensity').value) : 0;
+
+            const totalScore = ratings.q1 + ratings.q2 + ratings.q3 + ratings.q4 + ratings.q5;
+
+            const newRecord = {
+                id: Date.now(),
+                date: surveyDate,
+                category: category,
+                name: playerName,
+                scores: { ...ratings },
+                totalScore: totalScore,
+                hasPain: hasPain,
+                painLocation: painLocation,
+                painIntensity: painIntensity
+            };
+
+            const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            existing.push(newRecord);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+
+            alert(`Merci ${playerName} ! Ton bilan Wellness (${totalScore}/25 pts) a bien été enregistré pour l'équipe ${category}.`);
+            
+            switchTab('coach');
+        }
+
+        function getRecords() {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        }
+
+        function renderDashboardTable() {
+            const records = getRecords();
+            const filterTeam = document.getElementById('filter-team').value;
+            const tbody = document.getElementById('dashboard-tbody');
+            tbody.innerHTML = '';
+
+            const filtered = records.filter(r => filterTeam === 'ALL' || r.category === filterTeam);
+
+            document.getElementById('kpi-count').textContent = `${filtered.length} Bilan(s)`;
+            
+            if (filtered.length > 0) {
+                const avg = (filtered.reduce((acc, r) => acc + r.totalScore, 0) / filtered.length).toFixed(1);
+                document.getElementById('kpi-avg').textContent = `${avg} / 25`;
+                
+                const redCount = filtered.filter(r => r.totalScore < 15).length;
+                document.getElementById('kpi-red').textContent = redCount;
+
+                const painCount = filtered.filter(r => r.hasPain).length;
+                document.getElementById('kpi-pain').textContent = painCount;
+            } else {
+                document.getElementById('kpi-avg').textContent = '-- / 25';
+                document.getElementById('kpi-red').textContent = '0';
+                document.getElementById('kpi-pain').textContent = '0';
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Aucun bilan enregistré. Clique sur "Charger Démos" ou demande aux joueuses de remplir le questionnaire.</td></tr>`;
+                return;
+            }
+
+            filtered.reverse().forEach(r => {
+                const tr = document.createElement('tr');
+                
+                let zoneBadge = '';
+                let coachAction = '';
+
+                if (r.totalScore >= 20) {
+                    zoneBadge = `<span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-bold text-[11px]">🟢 Zone Verte (${r.totalScore})</span>`;
+                    coachAction = `Séance 100% d'intensité. Pliométrie & sprints max autorisés.`;
+                } else if (r.totalScore >= 15) {
+                    zoneBadge = `<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded font-bold text-[11px]">🟡 Zone Jaune (${r.totalScore})</span>`;
+                    coachAction = `Maintien séance, réduction de 20-30% du volume de saut.`;
+                } else {
+                    zoneBadge = `<span class="bg-red-100 text-red-800 px-2 py-1 rounded font-bold text-[11px]">🔴 Zone Rouge (${r.totalScore})</span>`;
+                    coachAction = `<strong class="text-red-700">Alerte Fatigue :</strong> Pas de saut 1-pied ni pliométrie. Focus mobilité & récupération.`;
+                }
+
+                if (r.scores.q1 <= 2 && r.scores.q3 <= 2) {
+                    coachAction = `<strong class="text-red-600">🚨 RÈGLE LCA :</strong> Sommeil & Courbatures faibles. Interdiction de pliométrie intense !`;
+                }
+
+                const painBadge = r.hasPain ? 
+                    `<span class="text-red-600 font-bold">🔴 ${r.painLocation} (${r.painIntensity}/10)</span>` : 
+                    `<span class="text-emerald-600">🟢 Aucune</span>`;
+
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-900">${r.name}</td>
+                    <td class="p-3"><span class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded font-bold text-[10px]">${r.category}</span></td>
+                    <td class="p-3 font-extrabold text-sm">${r.totalScore} / 25</td>
+                    <td class="p-3">${zoneBadge}</td>
+                    <td class="p-3">${painBadge}</td>
+                    <td class="p-3 text-slate-600">${coachAction}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteRecord(${r.id})" class="text-slate-400 hover:text-red-600 font-bold text-xs p-1" title="Supprimer">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function loadDemoData() {
+            const demoData = [
+                { id: 1, date: '2026-08-19', category: 'U16', name: 'Camille Favrod', scores: {q1: 4, q2: 4, q3: 4, q4: 4, q5: 5}, totalScore: 21, hasPain: false, painLocation: 'Aucune', painIntensity: 0 },
+                { id: 2, date: '2026-08-19', category: 'U16', name: 'Sophie Pittet', scores: {q1: 2, q2: 2, q3: 1, q4: 3, q5: 2}, totalScore: 10, hasPain: true, painLocation: 'Genou (LCA / Rotulien)', painIntensity: 5 },
+                { id: 3, date: '2026-08-19', category: 'U18', name: 'Charlotte Dépraz', scores: {q1: 5, q2: 4, q3: 5, q4: 4, q5: 4}, totalScore: 22, hasPain: false, painLocation: 'Aucune', painIntensity: 0 },
+                { id: 4, date: '2026-08-19', category: 'U18', name: 'Laura Jaccard', scores: {q1: 3, q2: 3, q3: 3, q4: 3, q5: 4}, totalScore: 16, hasPain: false, painLocation: 'Aucune', painIntensity: 0 },
+                { id: 5, date: '2026-08-19', category: 'U16', name: 'Léa Monnard', scores: {q1: 1, q2: 2, q3: 2, q4: 2, q5: 2}, totalScore: 9, hasPain: true, painLocation: 'Cheville / Pied', painIntensity: 6 }
+            ];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(demoData));
+            renderDashboardTable();
+            alert("Les données de démonstration pour Blonay Basket ont été chargées avec succès !");
+        }
+
+        function exportToCSV() {
+            const records = getRecords();
+            if (records.length === 0) {
+                alert("Aucune donnée à exporter !");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,ID,Date,Equipe,Nom,TotalScore,Sommeil,Energie,Courbatures,Stress,Nutrition,Douleur,ZoneDouleur,Intensite\n";
+            
+            records.forEach(r => {
+                csvContent += `${r.id},${r.date},${r.category},"${r.name}",${r.totalScore},${r.scores.q1},${r.scores.q2},${r.scores.q3},${r.scores.q4},${r.scores.q5},${r.hasPain},"${r.painLocation}",${r.painIntensity}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Suivi_Wellness_Blonay_Basket_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Lun', 'Mar', 'Mer (Entr.)', 'Jeu', 'Ven', 'Sam (Match)', 'Dim'],
+                    datasets: [
+                        {
+                            label: 'Moyenne U16 National',
+                            data: [20.5, 19.8, 17.2, 19.0, 21.2, 22.0, 18.5],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Moyenne U18 National',
+                            data: [21.0, 20.2, 18.5, 19.5, 21.8, 22.5, 19.0],
+                            borderColor: '#ea580c',
+                            backgroundColor: 'rgba(234, 88, 12, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 5,
+                            max: 25,
+                            title: { display: true, text: 'Score Wellness (/25)' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
