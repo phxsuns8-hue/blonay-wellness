@@ -373,26 +373,40 @@
             <div id="coach-dashboard-content" class="hidden space-y-6">
                 
                 <!-- Action Header Bar -->
-                <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-base font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-chart-line text-blonay-lightBlue"></i> Tableau de Bord Coach & Roster
-                        </h2>
-                        <p class="text-xs text-slate-400">Consultation des scores, alertes de blessure et exportation CSV.</p>
+                <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line text-blonay-lightBlue"></i> Tableau de Bord Coach & Roster
+                            </h2>
+                            <p class="text-xs text-slate-400">Consultation des scores, alertes de blessure et synchronisation Cloud.</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="openManageRosterModal()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600">
+                                <i class="fa-solid fa-users-gear mr-1"></i> Gérer les Joueuses
+                            </button>
+                            <button onclick="changeCoachPin()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600">
+                                <i class="fa-solid fa-key mr-1"></i> Modifier PIN
+                            </button>
+                            <button onclick="syncFromCloud()" class="bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all shadow-md">
+                                <i class="fa-solid fa-rotate mr-1"></i> Actualiser Cloud
+                            </button>
+                            <button onclick="exportToCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all shadow-md">
+                                <i class="fa-solid fa-file-excel mr-1"></i> Exporter CSV
+                            </button>
+                            <button onclick="lockCoachDashboard()" class="bg-red-950/80 hover:bg-red-900 text-xs font-semibold text-red-300 px-3 py-2 rounded-xl transition-all border border-red-800">
+                                <i class="fa-solid fa-lock mr-1"></i> Verrouiller
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button onclick="openManageRosterModal()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600">
-                            <i class="fa-solid fa-users-gear mr-1"></i> Gérer les Joueuses
-                        </button>
-                        <button onclick="changeCoachPin()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600">
-                            <i class="fa-solid fa-key mr-1"></i> Modifier PIN
-                        </button>
-                        <button onclick="exportToCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all shadow-md">
-                            <i class="fa-solid fa-file-excel mr-1"></i> Exporter CSV
-                        </button>
-                        <button onclick="lockCoachDashboard()" class="bg-red-950/80 hover:bg-red-900 text-xs font-semibold text-red-300 px-3 py-2 rounded-xl transition-all border border-red-800">
-                            <i class="fa-solid fa-lock mr-1"></i> Verrouiller
+                    <!-- Cloud Sync URL Configuration Box -->
+                    <div class="pt-3 border-t border-slate-700/80 flex flex-wrap items-center gap-2 text-xs">
+                        <span class="text-slate-400 font-semibold"><i class="fa-solid fa-cloud text-blonay-lightBlue"></i> Google Sheets API URL :</span>
+                        <input type="text" id="input-script-url" placeholder="Cole aqui o URL do seu Google Apps Script Web App" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:border-blonay-lightBlue">
+                        <button onclick="saveScriptUrl()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-3 py-1.5 rounded-lg border border-slate-600">
+                            Enregistrer URL
                         </button>
                     </div>
                 </div>
@@ -502,7 +516,7 @@
 
     <!-- Application Logic Script -->
     <script>
-        // Default Rosters updated as requested
+        // Default Rosters
         const DEFAULT_ROSTERS = {
             U16: [
                 "Julia Lessnich", "Red", "Mi amor", "Bae"
@@ -522,27 +536,120 @@
             q_nutrition: 0
         };
         let isCoachUnlocked = false;
+        let googleScriptUrl = localStorage.getItem('blonay_google_script_url') || '';
 
         // Initialize App on Load
         document.addEventListener('DOMContentLoaded', () => {
             initRosters();
             initDatePicker();
             updatePlayerDropdown();
+            if (googleScriptUrl) {
+                document.getElementById('input-script-url').value = googleScriptUrl;
+            }
             renderSubmissionsTable();
         });
 
-        // Initialize Rosters from LocalStorage or Defaults
-        function initRosters() {
-            const saved = localStorage.getItem('blonay_rosters');
-            if (saved) {
-                try {
-                    currentRosters = JSON.parse(saved);
-                } catch (e) {
-                    currentRosters = JSON.parse(JSON.stringify(DEFAULT_ROSTERS));
+        function saveScriptUrl() {
+            const url = document.getElementById('input-script-url').value.trim();
+            localStorage.setItem('blonay_google_script_url', url);
+            googleScriptUrl = url;
+            showCustomToast("✔ URL do Google Sheets configurado com sucesso!", "success");
+            syncFromCloud();
+        }
+
+        // Handle Form Submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            // Validate Likert scores
+            for (let k in scoresState) {
+                if (scoresState[k] === 0) {
+                    showCustomToast("Veuillez répondre aux 5 questions Wellness (écho 1-5).");
+                    return;
                 }
-            } else {
-                currentRosters = JSON.parse(JSON.stringify(DEFAULT_ROSTERS));
-                saveRostersToStorage();
+            }
+
+            const team = document.getElementById('input-team').value;
+            const player = document.getElementById('input-player').value;
+            const date = document.getElementById('input-date').value;
+
+            if (!player) {
+                showCustomToast("Veuillez sélectionner le nom de la joueuse.");
+                return;
+            }
+
+            const totalScore = scoresState.q_sleep + scoresState.q_energy + scoresState.q_soreness + scoresState.q_stress + scoresState.q_nutrition;
+
+            const hasInjury = document.querySelector('input[name="has_injury"]:checked').value === 'Yes';
+            let injuryData = null;
+            if (hasInjury) {
+                injuryData = {
+                    location: document.getElementById('injury-location').value,
+                    scale: document.getElementById('injury-scale').value
+                };
+            }
+
+            const cyclePhase = document.getElementById('cycle-phase').value;
+
+            const submission = {
+                id: Date.now(),
+                date: date,
+                team: team,
+                player: player,
+                scores: { ...scoresState },
+                totalScore: totalScore,
+                injury: injuryData,
+                cycle: cyclePhase
+            };
+
+            // 1. Save locally
+            const existing = JSON.parse(localStorage.getItem('blonay_wellness_submissions') || '[]');
+            existing.unshift(submission);
+            localStorage.setItem('blonay_wellness_submissions', JSON.stringify(existing));
+
+            // 2. Send to Google Sheets Cloud Backend if configured
+            if (googleScriptUrl) {
+                try {
+                    fetch(googleScriptUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(submission)
+                    });
+                } catch (err) {
+                    console.error("Cloud submission error:", err);
+                }
+            }
+
+            showCustomToast("✔ Merci ! Ton bilan a été enregistré avec succès.", "success");
+
+            // Reset form selections
+            scoresState = { q_sleep: 0, q_energy: 0, q_soreness: 0, q_stress: 0, q_nutrition: 0 };
+            document.querySelectorAll('.likert-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('input[name="has_injury"][value="No"]').checked = true;
+            toggleInjuryDetails(false);
+
+            renderSubmissionsTable();
+        }
+
+        async function syncFromCloud() {
+            if (!googleScriptUrl) {
+                showCustomToast("Configure a URL do Google Sheets para sincronizar.");
+                return;
+            }
+
+            showCustomToast("Sincronizando dados com o Google Sheets...");
+            try {
+                const res = await fetch(googleScriptUrl + '?action=get');
+                const cloudData = await res.json();
+                if (Array.isArray(cloudData)) {
+                    localStorage.setItem('blonay_wellness_submissions', JSON.stringify(cloudData));
+                    renderSubmissionsTable();
+                    showCustomToast("✔ Dados atualizados em tempo real!", "success");
+                }
+            } catch (err) {
+                console.error("Error fetching cloud data:", err);
+                showCustomToast("Aviso: Exibindo dados locais.");
             }
         }
 
@@ -707,7 +814,7 @@
 
         function changeCoachPin() {
             const current = prompt("Entrez le code PIN actuel :");
-            const savedPin = localStorage.getItem('blonay_coach_pin') || '2026';
+            const savedPin = localStorage.getItem('blonay_coach_pin') || '1992';
             if (current !== savedPin) {
                 showCustomToast("Code PIN actuel incorrect.");
                 return;
