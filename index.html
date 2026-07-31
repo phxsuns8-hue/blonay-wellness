@@ -36,8 +36,8 @@
                 <button id="nav-player-btn" onclick="switchTab('player')" class="px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all">
                     📋 Espace Joueuse
                 </button>
-                <button id="nav-coach-btn" onclick="switchTab('coach')" class="px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all">
-                    📊 Dashboard Coach
+                <button id="nav-coach-btn" onclick="switchTab('coach')" class="px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all flex items-center gap-1">
+                    🔒 Dashboard Coach
                 </button>
             </div>
         </div>
@@ -309,6 +309,12 @@
                     <button onclick="openRosterModal()" class="px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs rounded-lg transition-all shadow-sm flex items-center gap-1">
                         ⚙️ Gérer les Joueuses
                     </button>
+                    <button onclick="changeCoachPin()" class="px-3 py-2 bg-indigo-900 hover:bg-indigo-800 text-white font-bold text-xs rounded-lg transition-all shadow-sm flex items-center gap-1">
+                        🔑 Modifier PIN Coach
+                    </button>
+                    <button onclick="lockCoachDashboard()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-lg transition-all shadow-sm flex items-center gap-1">
+                        🔒 Verrouiller
+                    </button>
                     <button onclick="exportToCSV()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg transition-all">
                         📥 Exporter CSV (Excel)
                     </button>
@@ -421,10 +427,14 @@
         // Default Rosters for Blonay Basket
         const DEFAULT_ROSTERS = {
             U16: [
-                "Julia Lessnich", "Ninita", "Red", "Mi amor"
+                "Camille Favrod", "Emma Rochat", "Sophie Pittet", "Léa Monnard", "Chloé Bernasconi",
+                "Maya Tanner", "Inès Grandjean", "Julie Rochat", "Clara Diserens", "Alice Meylan",
+                "Elena Rossi", "Lucie Mottier", "Zoe Reymond", "Lara Bovard", "Sara Martin"
             ],
             U18: [
-                "Julia Lessnich"
+                "Charlotte Dépraz", "Laura Jaccard", "Margaux Pasche", "Mélanie Gex", "Anouk Rochat",
+                "Amélie Neyroud", "Nora Jacot", "Eline Crausaz", "Mathilde Vauthey", "Jessica Blanc",
+                "Manon Nicole", "Éléonore Nicole", "Eva Pernet", "Coralie Dufour", "Pauline Jordan"
             ]
         };
 
@@ -435,6 +445,10 @@
         // Local Storage Keys
         const STORAGE_KEY = 'blonay_wellness_records';
         const ROSTER_KEY = 'blonay_wellness_rosters';
+        const PIN_KEY = 'blonay_wellness_coach_pin';
+
+        // PIN Authentication state
+        let isCoachAuthenticated = false;
 
         document.addEventListener('DOMContentLoaded', () => {
             // Set today's date
@@ -443,6 +457,67 @@
             initChart();
             renderDashboardTable();
         });
+
+        function getCoachPin() {
+            return localStorage.getItem(PIN_KEY) || "2026";
+        }
+
+        function switchTab(tab) {
+            const playerSec = document.getElementById('tab-player');
+            const coachSec = document.getElementById('tab-coach');
+            const navPlayerBtn = document.getElementById('nav-player-btn');
+            const navCoachBtn = document.getElementById('nav-coach-btn');
+
+            if (tab === 'coach' && !isCoachAuthenticated) {
+                const currentPin = getCoachPin();
+                const inputPin = prompt("🔒 Accès Réservé au Coach\n\nVeuillez entrer le code PIN pour accéder au Dashboard :");
+                
+                if (inputPin === null) return; // User cancelled
+
+                if (inputPin.trim() === currentPin) {
+                    isCoachAuthenticated = true;
+                } else {
+                    alert("❌ Code PIN incorrect ! Seul le coach peut consulter le dashboard et modifier les données.");
+                    return;
+                }
+            }
+
+            if (tab === 'player') {
+                playerSec.classList.remove('hidden');
+                coachSec.classList.add('hidden');
+                navPlayerBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all";
+                navCoachBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all flex items-center gap-1";
+            } else {
+                playerSec.classList.add('hidden');
+                coachSec.classList.remove('hidden');
+                navCoachBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all flex items-center gap-1";
+                navPlayerBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all";
+                renderDashboardTable();
+            }
+        }
+
+        function changeCoachPin() {
+            const currentPin = getCoachPin();
+            const inputOld = prompt("Entrez le code PIN actuel :");
+            if (inputOld !== currentPin) {
+                alert("❌ Code PIN incorrect !");
+                return;
+            }
+
+            const newPin = prompt("Entrez le nouveau code PIN Coach (ex: 1234) :");
+            if (newPin && newPin.trim().length >= 3) {
+                localStorage.setItem(PIN_KEY, newPin.trim());
+                alert(`✅ Le code PIN Coach a bien été modifié avec succès !`);
+            } else if (newPin) {
+                alert("⚠️ Le code PIN doit contenir au moins 3 caractères.");
+            }
+        }
+
+        function lockCoachDashboard() {
+            isCoachAuthenticated = false;
+            switchTab('player');
+            alert("🔒 Le Dashboard Coach est à nouveau verrouillé.");
+        }
 
         function getRosters() {
             const saved = localStorage.getItem(ROSTER_KEY);
@@ -453,26 +528,6 @@
             localStorage.setItem(ROSTER_KEY, JSON.stringify(rosters));
             updatePlayerDropdown();
             renderRosterModalLists();
-        }
-
-        function switchTab(tab) {
-            const playerSec = document.getElementById('tab-player');
-            const coachSec = document.getElementById('tab-coach');
-            const navPlayerBtn = document.getElementById('nav-player-btn');
-            const navCoachBtn = document.getElementById('nav-coach-btn');
-
-            if (tab === 'player') {
-                playerSec.classList.remove('hidden');
-                coachSec.classList.add('hidden');
-                navPlayerBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all";
-                navCoachBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all";
-            } else {
-                playerSec.classList.add('hidden');
-                coachSec.classList.remove('hidden');
-                navCoachBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-orange-600 text-white shadow transition-all";
-                navPlayerBtn.className = "px-4 py-2 text-xs md:text-sm font-semibold rounded-lg text-blue-200 hover:text-white hover:bg-blue-800 transition-all";
-                renderDashboardTable();
-            }
         }
 
         function updatePlayerDropdown() {
@@ -570,7 +625,6 @@
             }
         }
 
-        // ... existing rating set function & form submission ...
         function setRating(question, value, label) {
             ratings[question] = value;
             ratingLabels[question] = label;
@@ -649,7 +703,12 @@
 
             alert(`Merci ${playerName} ! Ton bilan Wellness (${totalScore}/25 pts) a bien été enregistré pour l'équipe ${category}.`);
             
-            switchTab('coach');
+            // Reset form
+            document.getElementById('wellness-form').reset();
+            Object.keys(ratings).forEach(k => ratings[k] = 0);
+            document.querySelectorAll('.score-btn').forEach(b => b.className = b.className.replace(/active-\d/, ''));
+            calculateTotalPreview();
+            document.getElementById('survey-date').valueAsDate = new Date();
         }
 
         function getRecords() {
