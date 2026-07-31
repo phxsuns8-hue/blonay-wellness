@@ -7,14 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Firebase Module Integration -->
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Initialization with Environment Fallbacks
         let db = null;
         let auth = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'blonay-wellness-app';
@@ -34,37 +32,38 @@
                     }
                     listenToFirestore();
                 };
+
                 initAuth();
             }
         } catch (e) {
-            console.warn("Firestore initialization bypassed, using Webhook / Local storage mode", e);
+            console.warn('Firestore initialization bypassed, using fallback mode', e);
         }
 
         function listenToFirestore() {
-            if (!db || !auth.currentUser) return;
+            if (!db || !auth?.currentUser) return;
             const submissionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'wellness_submissions');
-            
+
             onSnapshot(submissionsRef, (snapshot) => {
                 const cloudSubmissions = [];
-                snapshot.forEach(doc => {
-                    cloudSubmissions.push({ id: doc.id, ...doc.data() });
+                snapshot.forEach((doc) => {
+                    cloudSubmissions.push({ cloudId: doc.id, ...doc.data() });
                 });
-                if (cloudSubmissions.length > 0) {
+                if (cloudSubmissions.length > 0 && typeof window.mergeCloudSubmissions === 'function') {
                     window.mergeCloudSubmissions(cloudSubmissions);
                 }
             }, (error) => {
-                console.error("Firestore snapshot error:", error);
+                console.error('Firestore snapshot error:', error);
             });
         }
 
-        window.saveToFirestore = async function(data) {
+        window.saveToFirestore = async function (data) {
             if (!db || !auth?.currentUser) return false;
             try {
                 const submissionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'wellness_submissions');
                 await addDoc(submissionsRef, data);
                 return true;
             } catch (err) {
-                console.error("Firestore save error:", err);
+                console.error('Firestore save error:', err);
                 return false;
             }
         };
@@ -87,6 +86,7 @@
             }
         }
     </script>
+
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
@@ -101,22 +101,19 @@
     </style>
 </head>
 <body class="h-full text-slate-100 font-sans antialiased bg-slate-900 custom-scrollbar flex flex-col">
-
-    <!-- Top Navigation Bar -->
     <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-40 shadow-lg">
-        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-blonay-blue flex items-center justify-center p-2 shadow-lg border border-blonay-orange">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-full bg-blonay-blue flex items-center justify-center p-2 shadow-lg border border-blonay-orange shrink-0">
                     <i class="fa-solid fa-basketball text-blonay-orange text-xl"></i>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <h1 class="text-base font-bold text-white leading-tight">Blonay Basket</h1>
-                    <p class="text-xs text-slate-400 font-medium">Wellness & Readiness Tracker</p>
+                    <p class="text-xs text-slate-400 font-medium truncate">Wellness & Readiness Tracker</p>
                 </div>
             </div>
 
-            <!-- View Switcher Tabs -->
-            <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+            <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800 shrink-0">
                 <button id="nav-btn-player" onclick="switchTab('player')" class="px-3 py-1.5 text-xs font-semibold rounded-md text-white bg-blonay-blue shadow transition-all flex items-center gap-1.5">
                     <i class="fa-solid fa-user-pen"></i> Joueuse
                 </button>
@@ -127,19 +124,13 @@
         </div>
     </header>
 
-    <!-- Main Container -->
     <main class="flex-grow max-w-5xl w-full mx-auto p-4 md:p-6">
-
-        <!-- Notification Toast -->
         <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 font-semibold text-sm">
             <i class="fa-solid fa-circle-check text-lg"></i>
             <span id="toast-message">Action effectuée avec succès!</span>
         </div>
 
-        <!-- TAB 1: PLAYER QUESTIONNAIRE -->
         <section id="tab-player" class="space-y-6">
-            
-            <!-- Header Info Box -->
             <div class="bg-gradient-to-r from-blonay-blue/40 via-slate-800 to-slate-900 p-4 md:p-5 rounded-2xl border border-blonay-blue/50 shadow-xl">
                 <div class="flex items-start gap-3">
                     <div class="p-2.5 bg-blonay-orange/20 rounded-xl text-blonay-orange">
@@ -154,15 +145,10 @@
                 </div>
             </div>
 
-            <!-- Questionnaire Form -->
             <form id="wellness-form" onsubmit="handleFormSubmit(event)" class="space-y-6">
-                
-                <!-- Player Identification -->
                 <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/60 shadow-md grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                            1. Catégorie / Équipe
-                        </label>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">1. Catégorie / Équipe</label>
                         <select id="input-team" onchange="updatePlayerDropdown()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-blonay-lightBlue">
                             <option value="U16">U16 Féminines (National)</option>
                             <option value="U18">U18 Féminines (National)</option>
@@ -170,201 +156,104 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                            2. Nom de la Joueuse
-                        </label>
-                        <select id="input-player" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-blonay-lightBlue">
-                            <!-- Populated dynamically -->
-                        </select>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">2. Nom de la Joueuse</label>
+                        <select id="input-player" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-blonay-lightBlue"></select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                            3. Date de la Saisie
-                        </label>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">3. Date de la Saisie</label>
                         <input type="date" id="input-date" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-blonay-lightBlue">
                     </div>
                 </div>
 
-                <!-- 5 Wellness Likert Questions -->
                 <div class="space-y-4">
                     <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                         <i class="fa-solid fa-heart-pulse text-blonay-orange"></i> Questions Wellness (Échelle 1 à 5)
                     </h3>
 
-                    <!-- Question 1: Sleep -->
                     <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                         <div class="flex justify-between items-center flex-wrap gap-2">
                             <span class="text-sm font-bold text-white">1. Sommeil & Récupération</span>
                             <span class="text-xs text-slate-400">« Comment as-tu dormi la nuit dernière ? »</span>
                         </div>
                         <div class="grid grid-cols-5 gap-2">
-                            <button type="button" onclick="selectScore('q_sleep', 1)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">😫</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">1 - Mauvais (&lt;6h)</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_sleep', 2)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🙁</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">2 - Agité</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_sleep', 3)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">😐</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">3 - Correct</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_sleep', 4)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🙂</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">4 - Bien (8h)</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_sleep', 5)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🤩</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">5 - Parfait (&gt;9h)</div>
-                            </button>
+                            <button type="button" onclick="selectScore('q_sleep', 1)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">😫</div><div class="text-[10px] font-bold mt-1 text-slate-400">1 - Mauvais (&lt;6h)</div></button>
+                            <button type="button" onclick="selectScore('q_sleep', 2)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🙁</div><div class="text-[10px] font-bold mt-1 text-slate-400">2 - Agité</div></button>
+                            <button type="button" onclick="selectScore('q_sleep', 3)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">😐</div><div class="text-[10px] font-bold mt-1 text-slate-400">3 - Correct</div></button>
+                            <button type="button" onclick="selectScore('q_sleep', 4)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🙂</div><div class="text-[10px] font-bold mt-1 text-slate-400">4 - Bien (8h)</div></button>
+                            <button type="button" onclick="selectScore('q_sleep', 5)" class="likert-btn q_sleep_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🤩</div><div class="text-[10px] font-bold mt-1 text-slate-400">5 - Parfait (&gt;9h)</div></button>
                         </div>
                     </div>
 
-                    <!-- Question 2: Energy -->
                     <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                         <div class="flex justify-between items-center flex-wrap gap-2">
                             <span class="text-sm font-bold text-white">2. Niveau d'Énergie au Réveil</span>
                             <span class="text-xs text-slate-400">« Quel est ton niveau de vitalité ce matin ? »</span>
                         </div>
                         <div class="grid grid-cols-5 gap-2">
-                            <button type="button" onclick="selectScore('q_energy', 1)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🪫</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">1 - Épuisée</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_energy', 2)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🥱</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">2 - Fatiguée</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_energy', 3)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🙂</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">3 - Normale</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_energy', 4)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">⚡</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">4 - En Forme</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_energy', 5)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🔥</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">5 - Pleine Énergie</div>
-                            </button>
+                            <button type="button" onclick="selectScore('q_energy', 1)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🪫</div><div class="text-[10px] font-bold mt-1 text-slate-400">1 - Épuisée</div></button>
+                            <button type="button" onclick="selectScore('q_energy', 2)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🥱</div><div class="text-[10px] font-bold mt-1 text-slate-400">2 - Fatiguée</div></button>
+                            <button type="button" onclick="selectScore('q_energy', 3)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🙂</div><div class="text-[10px] font-bold mt-1 text-slate-400">3 - Normale</div></button>
+                            <button type="button" onclick="selectScore('q_energy', 4)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">⚡</div><div class="text-[10px] font-bold mt-1 text-slate-400">4 - En Forme</div></button>
+                            <button type="button" onclick="selectScore('q_energy', 5)" class="likert-btn q_energy_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🔥</div><div class="text-[10px] font-bold mt-1 text-slate-400">5 - Pleine Énergie</div></button>
                         </div>
                     </div>
 
-                    <!-- Question 3: Soreness -->
                     <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                         <div class="flex justify-between items-center flex-wrap gap-2">
                             <span class="text-sm font-bold text-white">3. Courbatures & Tensions Musculaires</span>
                             <span class="text-xs text-slate-400">« Ressens-tu des douleurs musculaires ? »</span>
                         </div>
                         <div class="grid grid-cols-5 gap-2">
-                            <button type="button" onclick="selectScore('q_soreness', 1)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🛑</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">1 - Très Intenses</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_soreness', 2)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">⚠️</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">2 - Marquées</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_soreness', 3)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🦵</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">3 - Modérées</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_soreness', 4)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">👍</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">4 - Légères</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_soreness', 5)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">✨</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">5 - Aucune Douleur</div>
-                            </button>
+                            <button type="button" onclick="selectScore('q_soreness', 1)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🛑</div><div class="text-[10px] font-bold mt-1 text-slate-400">1 - Très Intenses</div></button>
+                            <button type="button" onclick="selectScore('q_soreness', 2)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">⚠️</div><div class="text-[10px] font-bold mt-1 text-slate-400">2 - Marquées</div></button>
+                            <button type="button" onclick="selectScore('q_soreness', 3)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🦵</div><div class="text-[10px] font-bold mt-1 text-slate-400">3 - Modérées</div></button>
+                            <button type="button" onclick="selectScore('q_soreness', 4)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">👍</div><div class="text-[10px] font-bold mt-1 text-slate-400">4 - Légères</div></button>
+                            <button type="button" onclick="selectScore('q_soreness', 5)" class="likert-btn q_soreness_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">✨</div><div class="text-[10px] font-bold mt-1 text-slate-400">5 - Aucune Douleur</div></button>
                         </div>
                     </div>
 
-                    <!-- Question 4: Stress -->
                     <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                         <div class="flex justify-between items-center flex-wrap gap-2">
                             <span class="text-sm font-bold text-white">4. Niveau de Stress (École & Perso)</span>
                             <span class="text-xs text-slate-400">« Quel est ton niveau de stress général ? »</span>
                         </div>
                         <div class="grid grid-cols-5 gap-2">
-                            <button type="button" onclick="selectScore('q_stress', 1)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🤯</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">1 - Extrême</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_stress', 2)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">😰</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">2 - Élevé</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_stress', 3)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">😐</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">3 - Moyen</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_stress', 4)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">😌</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">4 - Calme</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_stress', 5)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🧘</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">5 - Sérénité Totale</div>
-                            </button>
+                            <button type="button" onclick="selectScore('q_stress', 1)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🤯</div><div class="text-[10px] font-bold mt-1 text-slate-400">1 - Extrême</div></button>
+                            <button type="button" onclick="selectScore('q_stress', 2)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">😰</div><div class="text-[10px] font-bold mt-1 text-slate-400">2 - Élevé</div></button>
+                            <button type="button" onclick="selectScore('q_stress', 3)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">😐</div><div class="text-[10px] font-bold mt-1 text-slate-400">3 - Moyen</div></button>
+                            <button type="button" onclick="selectScore('q_stress', 4)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">😌</div><div class="text-[10px] font-bold mt-1 text-slate-400">4 - Calme</div></button>
+                            <button type="button" onclick="selectScore('q_stress', 5)" class="likert-btn q_stress_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🧘</div><div class="text-[10px] font-bold mt-1 text-slate-400">5 - Sérénité Totale</div></button>
                         </div>
                     </div>
 
-                    <!-- Question 5: Nutrition -->
                     <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                         <div class="flex justify-between items-center flex-wrap gap-2">
                             <span class="text-sm font-bold text-white">5. Nutrition & Hydratation</span>
                             <span class="text-xs text-slate-400">« As-tu bien mangé et bu aujourd'hui ? »</span>
                         </div>
                         <div class="grid grid-cols-5 gap-2">
-                            <button type="button" onclick="selectScore('q_nutrition', 1)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🚫</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">1 - Très Mauvais</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_nutrition', 2)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🥤</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">2 - Insuffisant</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_nutrition', 3)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🍽️</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">3 - Correct</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_nutrition', 4)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🥗</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">4 - Bon</div>
-                            </button>
-                            <button type="button" onclick="selectScore('q_nutrition', 5)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700">
-                                <div class="text-lg">🥇</div>
-                                <div class="text-[10px] font-bold mt-1 text-slate-400">5 - Parfait</div>
-                            </button>
+                            <button type="button" onclick="selectScore('q_nutrition', 1)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🚫</div><div class="text-[10px] font-bold mt-1 text-slate-400">1 - Très Mauvais</div></button>
+                            <button type="button" onclick="selectScore('q_nutrition', 2)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🥤</div><div class="text-[10px] font-bold mt-1 text-slate-400">2 - Insuffisant</div></button>
+                            <button type="button" onclick="selectScore('q_nutrition', 3)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🍽️</div><div class="text-[10px] font-bold mt-1 text-slate-400">3 - Correct</div></button>
+                            <button type="button" onclick="selectScore('q_nutrition', 4)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🥗</div><div class="text-[10px] font-bold mt-1 text-slate-400">4 - Bon</div></button>
+                            <button type="button" onclick="selectScore('q_nutrition', 5)" class="likert-btn q_nutrition_btn p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-center transition-all hover:bg-slate-700"><div class="text-lg">🥇</div><div class="text-[10px] font-bold mt-1 text-slate-400">5 - Parfait</div></button>
                         </div>
                     </div>
-
                 </div>
 
-                <!-- Qualitative Health Questions -->
                 <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/60 space-y-4">
                     <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                         <i class="fa-solid fa-user-nurse text-blonay-lightBlue"></i> Suivi Santé & Prévention
                     </h3>
 
-                    <!-- Injury Flag -->
                     <div class="space-y-3">
-                        <label class="block text-xs font-semibold text-slate-200">
-                            Ressens-tu une douleur ou une gêne physique particulière aujourd'hui ?
-                        </label>
-                        <div class="flex gap-4">
-                            <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                                <input type="radio" name="has_injury" value="No" checked onclick="toggleInjuryDetails(false)" class="text-blonay-blue focus:ring-0"> Non, aucune gêne
-                            </label>
-                            <label class="flex items-center gap-2 text-sm text-amber-400 font-semibold cursor-pointer">
-                                <input type="radio" name="has_injury" value="Yes" onclick="toggleInjuryDetails(true)" class="text-blonay-blue focus:ring-0"> Oui, une gêne/douleur
-                            </label>
+                        <label class="block text-xs font-semibold text-slate-200">Ressens-tu une douleur ou une gêne physique particulière aujourd'hui ?</label>
+                        <div class="flex gap-4 flex-wrap">
+                            <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="radio" name="has_injury" value="No" checked onclick="toggleInjuryDetails(false)" class="text-blonay-blue focus:ring-0"> Non, aucune gêne</label>
+                            <label class="flex items-center gap-2 text-sm text-amber-400 font-semibold cursor-pointer"><input type="radio" name="has_injury" value="Yes" onclick="toggleInjuryDetails(true)" class="text-blonay-blue focus:ring-0"> Oui, une gêne/douleur</label>
                         </div>
 
-                        <!-- Sub-details for Injury -->
                         <div id="injury-details-box" class="hidden pl-4 border-l-2 border-amber-500 pt-2 space-y-3">
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 mb-1">Zone de la gêne / douleur :</label>
@@ -384,11 +273,8 @@
                         </div>
                     </div>
 
-                    <!-- Menstrual Cycle (Optional) -->
                     <div class="pt-2 border-t border-slate-700/60">
-                        <label class="block text-xs font-semibold text-slate-200 mb-2">
-                            Phase du Cycle Menstruel (Optionnel / Confidentiel Coach)
-                        </label>
+                        <label class="block text-xs font-semibold text-slate-200 mb-2">Phase du Cycle Menstruel (Optionnel / Confidentiel Coach)</label>
                         <select id="cycle-phase" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300">
                             <option value="Non renseigné">Préfère ne pas répondre</option>
                             <option value="Règles / Menstruation">Phase Menstruelle (Règles)</option>
@@ -399,118 +285,66 @@
                     </div>
                 </div>
 
-                <!-- Form Submit Button -->
                 <button type="submit" id="btn-submit" class="w-full bg-blonay-blue hover:bg-blue-800 text-white font-bold text-sm py-4 rounded-2xl shadow-lg border border-blonay-lightBlue/40 transition-all flex items-center justify-center gap-2">
                     <i class="fa-solid fa-paper-plane"></i> Envoyer mon Bilan Wellness
                 </button>
-
             </form>
         </section>
 
-        <!-- TAB 2: COACH DASHBOARD (PROTECTED) -->
         <section id="tab-coach" class="hidden space-y-6">
-
-            <!-- PIN Code Unlock Modal Overlay (If locked) -->
             <div id="coach-lock-overlay" class="bg-slate-950/90 backdrop-blur-md p-8 rounded-3xl border border-slate-800 text-center space-y-5 max-w-md mx-auto my-12 shadow-2xl">
-                <div class="w-16 h-16 bg-blonay-blue/20 text-blonay-lightBlue rounded-2xl flex items-center justify-center mx-auto text-2xl border border-blonay-blue/40">
-                    <i class="fa-solid fa-lock"></i>
-                </div>
+                <div class="w-16 h-16 bg-blonay-blue/20 text-blonay-lightBlue rounded-2xl flex items-center justify-center mx-auto text-2xl border border-blonay-blue/40"><i class="fa-solid fa-lock"></i></div>
                 <div>
                     <h2 class="text-xl font-bold text-white">Espace Réservé au Coach</h2>
                     <p class="text-xs text-slate-400 mt-1">Entrez le code PIN pour consulter les données des joueuses.</p>
                 </div>
-
                 <div class="space-y-3">
                     <input type="password" id="input-pin" maxlength="6" placeholder="Code PIN (ex: 2026)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-bold tracking-widest text-white focus:outline-none focus:border-blonay-lightBlue">
-                    <button onclick="unlockCoachDashboard()" class="w-full bg-blonay-orange hover:bg-orange-700 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-md">
-                        Déverrouiller
-                    </button>
+                    <button onclick="unlockCoachDashboard()" class="w-full bg-blonay-orange hover:bg-orange-700 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-md">Déverrouiller</button>
                     <p id="pin-error-msg" class="text-xs text-red-400 hidden font-semibold">Code PIN incorrect. Réessayez.</p>
                 </div>
             </div>
 
-            <!-- Unlocked Dashboard Content -->
             <div id="coach-dashboard-content" class="hidden space-y-6">
-                
-                <!-- Cloud Sync Configuration Box -->
                 <div class="bg-gradient-to-r from-blue-900/90 to-slate-800 p-5 rounded-2xl border-2 border-blonay-lightBlue shadow-2xl space-y-3">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-blonay-lightBlue/20 flex items-center justify-center text-blonay-lightBlue text-xl border border-blonay-lightBlue/40">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
-                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-blonay-lightBlue/20 flex items-center justify-center text-blonay-lightBlue text-xl border border-blonay-lightBlue/40"><i class="fa-solid fa-cloud-arrow-up"></i></div>
                         <div>
-                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">
-                                ☁️ Configuration de la Synchronisation Google Sheets (Optionnel)
-                            </h3>
-                            <p class="text-xs text-slate-300">
-                                Collez l'URL de votre Google Apps Script pour recevoir aussi les réponses dans Google Drive.
-                            </p>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">☁️ Configuration de la Synchronisation Google Sheets (Optionnel)</h3>
+                            <p class="text-xs text-slate-300">Collez l'URL de votre Google Apps Script pour recevoir aussi les réponses dans Google Drive.</p>
                         </div>
                     </div>
-
                     <div class="flex flex-wrap items-center gap-2 pt-1">
                         <input type="text" id="input-script-url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-grow bg-slate-950 border border-slate-600 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blonay-lightBlue font-mono">
-                        <button onclick="saveScriptUrl()" class="bg-blonay-lightBlue hover:bg-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2">
-                            <i class="fa-solid fa-floppy-disk"></i> Enregistrer URL
-                        </button>
+                        <button onclick="saveScriptUrl()" class="bg-blonay-lightBlue hover:bg-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> Enregistrer URL</button>
                     </div>
                 </div>
 
-                <!-- Action Header Bar -->
                 <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <h2 class="text-base font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-chart-line text-blonay-lightBlue"></i> Tableau de Bord Coach & Roster
-                            </h2>
+                            <h2 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-line text-blonay-lightBlue"></i> Tableau de Bord Coach & Roster</h2>
                             <p class="text-xs text-slate-400">Consultation des scores, alertes de blessure et synchronisation Cloud.</p>
                         </div>
-
                         <div class="flex flex-wrap items-center gap-2">
-                            <button onclick="openManageRosterModal()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600">
-                                <i class="fa-solid fa-users-gear mr-1"></i> Gérer les Joueuses
-                            </button>
-                            <button onclick="changeCoachPin()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600">
-                                <i class="fa-solid fa-key mr-1"></i> Modifier PIN
-                            </button>
-                            <button onclick="exportToCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all shadow-md">
-                                <i class="fa-solid fa-file-excel mr-1"></i> Exporter CSV
-                            </button>
-                            <button onclick="lockCoachDashboard()" class="bg-red-950/80 hover:bg-red-900 text-xs font-semibold text-red-300 px-3 py-2 rounded-xl transition-all border border-red-800">
-                                <i class="fa-solid fa-lock mr-1"></i> Verrouiller
-                            </button>
+                            <button onclick="openManageRosterModal()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600"><i class="fa-solid fa-users-gear mr-1"></i> Gérer les Joueuses</button>
+                            <button onclick="changeCoachPin()" class="bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all border border-slate-600"><i class="fa-solid fa-key mr-1"></i> Modifier PIN</button>
+                            <button onclick="exportToCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all shadow-md"><i class="fa-solid fa-file-excel mr-1"></i> Exporter CSV</button>
+                            <button onclick="lockCoachDashboard()" class="bg-red-950/80 hover:bg-red-900 text-xs font-semibold text-red-300 px-3 py-2 rounded-xl transition-all border border-red-800"><i class="fa-solid fa-lock mr-1"></i> Verrouiller</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Key Metrics Cards -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60">
-                        <span class="text-xs font-semibold text-slate-400">Total Réponses</span>
-                        <div id="stat-total-count" class="text-2xl font-bold text-white mt-1">0</div>
-                    </div>
-                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60">
-                        <span class="text-xs font-semibold text-slate-400">Moyenne Équipe (/25)</span>
-                        <div id="stat-avg-score" class="text-2xl font-bold text-blonay-lightBlue mt-1">--</div>
-                    </div>
-                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60">
-                        <span class="text-xs font-semibold text-slate-400">Alertes Douleurs</span>
-                        <div id="stat-injuries-count" class="text-2xl font-bold text-amber-400 mt-1">0</div>
-                    </div>
-                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60">
-                        <span class="text-xs font-semibold text-slate-400">Zone Rouge (&lt;15)</span>
-                        <div id="stat-red-count" class="text-2xl font-bold text-red-400 mt-1">0</div>
-                    </div>
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60"><span class="text-xs font-semibold text-slate-400">Total Réponses</span><div id="stat-total-count" class="text-2xl font-bold text-white mt-1">0</div></div>
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60"><span class="text-xs font-semibold text-slate-400">Moyenne Équipe (/25)</span><div id="stat-avg-score" class="text-2xl font-bold text-blonay-lightBlue mt-1">--</div></div>
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60"><span class="text-xs font-semibold text-slate-400">Alertes Douleurs</span><div id="stat-injuries-count" class="text-2xl font-bold text-amber-400 mt-1">0</div></div>
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60"><span class="text-xs font-semibold text-slate-400">Zone Rouge (&lt;15)</span><div id="stat-red-count" class="text-2xl font-bold text-red-400 mt-1">0</div></div>
                 </div>
 
-                <!-- Submissions History Table -->
                 <div class="bg-slate-800/80 rounded-2xl border border-slate-700/60 overflow-hidden shadow-lg space-y-3 p-4">
                     <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-700/60">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-list-check text-blonay-orange"></i> Historique des Bilans Soumis
-                        </h3>
-
-                        <!-- Filter Controls -->
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-list-check text-blonay-orange"></i> Historique des Bilans Soumis</h3>
                         <div class="flex items-center gap-2">
                             <select id="filter-team" onchange="renderDashboardTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white">
                                 <option value="ALL">Toutes les Équipes</option>
@@ -533,31 +367,21 @@
                                     <th class="p-3">Cycle</th>
                                 </tr>
                             </thead>
-                            <tbody id="table-submissions-body" class="divide-y divide-slate-700/60 text-slate-200 font-medium">
-                                <!-- Populated dynamically -->
-                            </tbody>
+                            <tbody id="table-submissions-body" class="divide-y divide-slate-700/60 text-slate-200 font-medium"></tbody>
                         </table>
                     </div>
                 </div>
-
             </div>
         </section>
-
     </main>
 
-    <!-- MODAL: MANAGE ROSTERS -->
     <div id="modal-roster" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-users-gear text-blonay-lightBlue"></i> Gestion des Elencos (U16 & U18)
-                </h3>
-                <button onclick="closeManageRosterModal()" class="text-slate-400 hover:text-white text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-users-gear text-blonay-lightBlue"></i> Gestion des Elencos (U16 & U18)</h3>
+                <button onclick="closeManageRosterModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <!-- Add Player Inputs -->
             <div class="space-y-3">
                 <div class="flex gap-2">
                     <select id="new-player-team" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
@@ -565,86 +389,139 @@
                         <option value="U18">U18</option>
                     </select>
                     <input type="text" id="new-player-name" placeholder="Nom de la nouvelle joueuse" class="flex-grow bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blonay-lightBlue">
-                    <button onclick="addNewPlayer()" class="bg-blonay-blue hover:bg-blue-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all">
-                        Ajouter
-                    </button>
+                    <button onclick="addNewPlayer()" class="bg-blonay-blue hover:bg-blue-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all">Ajouter</button>
                 </div>
             </div>
 
-            <!-- Roster List Displays -->
             <div class="grid grid-cols-2 gap-4 pt-2">
                 <div>
                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Équipe U16</h4>
-                    <div id="roster-list-u16" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                        <!-- Populated dynamically -->
-                    </div>
+                    <div id="roster-list-u16" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
                 </div>
                 <div>
                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Équipe U18</h4>
-                    <div id="roster-list-u18" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                        <!-- Populated dynamically -->
-                    </div>
+                    <div id="roster-list-u18" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
                 </div>
             </div>
 
             <div class="pt-3 border-t border-slate-800 flex justify-end">
-                <button onclick="closeManageRosterModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl border border-slate-700">
-                    Fermer
-                </button>
+                <button onclick="closeManageRosterModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl border border-slate-700">Fermer</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Default Rosters requested
-        const DEFAULT_ROSTERS = {
-            U16: ["Julia Lessnich", "Red", "Mi amor", "Bae"],
-            U18: ["Xiiii", "Te Quiero", "Trabalho"]
-        };
+        const memoryStore = {};
 
-        // Application State
-        let currentRosters = JSON.parse(localStorage.getItem('blonay_rosters')) || DEFAULT_ROSTERS;
-        let selectedScores = { q_sleep: 0, q_energy: 0, q_soreness: 0, q_stress: 0, q_nutrition: 0 };
-        let submissions = JSON.parse(localStorage.getItem('blonay_submissions')) || [];
-        let coachPin = localStorage.getItem('blonay_coach_pin') || '2026';
-        let scriptUrl = localStorage.getItem('blonay_script_url') || '';
-
-        // On Load
-        window.onload = function() {
-            document.getElementById('input-date').valueAsDate = new Date();
-            updatePlayerDropdown();
-            renderManageRosterLists();
-            if (scriptUrl) {
-                document.getElementById('input-script-url').value = scriptUrl;
+        function safeParseJSON(value, fallback) {
+            try {
+                return value ? JSON.parse(value) : fallback;
+            } catch {
+                return fallback;
             }
+        }
+
+        function safeGetJSON(key, fallback) {
+            try {
+                return safeParseJSON(localStorage.getItem(key), fallback);
+            } catch {
+                return key in memoryStore ? memoryStore[key] : fallback;
+            }
+        }
+
+        function safeGetText(key, fallback = '') {
+            try {
+                const value = localStorage.getItem(key);
+                return value !== null ? value : fallback;
+            } catch {
+                return key in memoryStore ? memoryStore[key] : fallback;
+            }
+        }
+
+        function safeSetJSON(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch {
+                memoryStore[key] = value;
+            }
+        }
+
+        function safeSetText(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch {
+                memoryStore[key] = value;
+            }
+        }
+
+        function escapeHTML(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function csvEscape(value) {
+            const str = String(value ?? '');
+            return '"' + str.replace(/"/g, '""') + '"';
+        }
+
+        const DEFAULT_ROSTERS = {
+            U16: ['Julia Lessnich', 'Red', 'Mi amor', 'Bae'],
+            U18: ['Xiiii', 'Te Quiero', 'Trabalho']
         };
+
+        let currentRosters = safeGetJSON('blonay_rosters', DEFAULT_ROSTERS);
+        if (!currentRosters || typeof currentRosters !== 'object') currentRosters = { ...DEFAULT_ROSTERS };
+        currentRosters.U16 = Array.isArray(currentRosters.U16) ? currentRosters.U16 : [...DEFAULT_ROSTERS.U16];
+        currentRosters.U18 = Array.isArray(currentRosters.U18) ? currentRosters.U18 : [...DEFAULT_ROSTERS.U18];
+
+        let selectedScores = { q_sleep: 0, q_energy: 0, q_soreness: 0, q_stress: 0, q_nutrition: 0 };
+        let submissions = safeGetJSON('blonay_submissions', []);
+        if (!Array.isArray(submissions)) submissions = [];
+        let coachPin = safeGetText('blonay_coach_pin', '2026');
+        let scriptUrl = safeGetText('blonay_script_url', '');
 
         function switchTab(tab) {
             const playerTab = document.getElementById('tab-player');
             const coachTab = document.getElementById('tab-coach');
             const btnPlayer = document.getElementById('nav-btn-player');
             const btnCoach = document.getElementById('nav-btn-coach');
+            if (!playerTab || !coachTab || !btnPlayer || !btnCoach) return;
 
             if (tab === 'player') {
                 playerTab.classList.remove('hidden');
                 coachTab.classList.add('hidden');
-                btnPlayer.className = "px-3 py-1.5 text-xs font-semibold rounded-md text-white bg-blonay-blue shadow transition-all flex items-center gap-1.5";
-                btnCoach.className = "px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition-all flex items-center gap-1.5";
+                btnPlayer.className = 'px-3 py-1.5 text-xs font-semibold rounded-md text-white bg-blonay-blue shadow transition-all flex items-center gap-1.5';
+                btnCoach.className = 'px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition-all flex items-center gap-1.5';
             } else {
                 playerTab.classList.add('hidden');
                 coachTab.classList.remove('hidden');
-                btnCoach.className = "px-3 py-1.5 text-xs font-semibold rounded-md text-white bg-blonay-blue shadow transition-all flex items-center gap-1.5";
-                btnPlayer.className = "px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition-all flex items-center gap-1.5";
+                btnCoach.className = 'px-3 py-1.5 text-xs font-semibold rounded-md text-white bg-blonay-blue shadow transition-all flex items-center gap-1.5';
+                btnPlayer.className = 'px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition-all flex items-center gap-1.5';
             }
         }
 
         function updatePlayerDropdown() {
-            const team = document.getElementById('input-team').value;
+            const teamEl = document.getElementById('input-team');
             const selectPlayer = document.getElementById('input-player');
+            if (!teamEl || !selectPlayer) return;
+
+            const team = teamEl.value;
+            const players = Array.isArray(currentRosters[team]) ? currentRosters[team] : [];
             selectPlayer.innerHTML = '';
 
-            const players = currentRosters[team] || [];
-            players.forEach(p => {
+            if (players.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Aucune joueuse disponible';
+                selectPlayer.appendChild(opt);
+                return;
+            }
+
+            players.forEach((p) => {
                 const opt = document.createElement('option');
                 opt.value = p;
                 opt.textContent = p;
@@ -656,68 +533,60 @@
             selectedScores[qKey] = val;
             const buttons = document.querySelectorAll(`.${qKey}_btn`);
             buttons.forEach((btn, idx) => {
-                if (idx + 1 === val) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
+                btn.classList.toggle('active', idx + 1 === val);
             });
         }
 
         function toggleInjuryDetails(show) {
             const box = document.getElementById('injury-details-box');
-            if (show) {
-                box.classList.remove('hidden');
-            } else {
-                box.classList.add('hidden');
-            }
+            if (!box) return;
+            box.classList.toggle('hidden', !show);
         }
 
         async function handleFormSubmit(e) {
             e.preventDefault();
 
-            // Validate Likert Questions
             const keys = ['q_sleep', 'q_energy', 'q_soreness', 'q_stress', 'q_nutrition'];
-            for (let k of keys) {
+            for (const k of keys) {
                 if (selectedScores[k] === 0) {
-                    showToast("Veuillez répondre aux 5 questions Wellness!", "error");
+                    showToast('Veuillez répondre aux 5 questions Wellness!', 'error');
                     return;
                 }
             }
 
-            const team = document.getElementById('input-team').value;
-            const player = document.getElementById('input-player').value;
-            const date = document.getElementById('input-date').value;
-            const hasInjury = document.querySelector('input[name="has_injury"]:checked').value === 'Yes';
-            const cyclePhase = document.getElementById('cycle-phase').value;
-
-            const totalScore = selectedScores.q_sleep + selectedScores.q_energy + selectedScores.q_soreness + selectedScores.q_stress + selectedScores.q_nutrition;
+            const team = document.getElementById('input-team')?.value || 'U16';
+            const player = document.getElementById('input-player')?.value || '';
+            const date = document.getElementById('input-date')?.value || new Date().toISOString().slice(0, 10);
+            const hasInjury = document.querySelector('input[name="has_injury"]:checked')?.value === 'Yes';
+            const cyclePhase = document.getElementById('cycle-phase')?.value || 'Non renseigné';
+            const totalScore = Object.values(selectedScores).reduce((acc, val) => acc + Number(val || 0), 0);
 
             const submission = {
                 id: 'sub_' + Date.now(),
-                date: date,
-                team: team,
-                player: player,
+                date,
+                team,
+                player,
                 scores: { ...selectedScores },
-                totalScore: totalScore,
+                totalScore,
                 injury: hasInjury ? {
-                    location: document.getElementById('injury-location').value,
-                    scale: document.getElementById('injury-scale').value
+                    location: document.getElementById('injury-location')?.value || 'Autre',
+                    scale: document.getElementById('injury-scale')?.value || '0'
                 } : null,
                 cycle: cyclePhase,
                 timestamp: new Date().toISOString()
             };
 
-            // Save to Local Storage
             submissions.unshift(submission);
-            localStorage.setItem('blonay_submissions', JSON.stringify(submissions));
+            safeSetJSON('blonay_submissions', submissions);
 
-            // Try Save to Firestore
             if (window.saveToFirestore) {
-                await window.saveToFirestore(submission);
+                try {
+                    await window.saveToFirestore(submission);
+                } catch (err) {
+                    console.warn('Firestore save skipped:', err);
+                }
             }
 
-            // Send to Google Sheets Apps Script Webhook (no-cors mode to prevent CORS blocking)
             if (scriptUrl) {
                 try {
                     fetch(scriptUrl, {
@@ -727,227 +596,297 @@
                         body: JSON.stringify(submission)
                     });
                 } catch (err) {
-                    console.warn("Webhook dispatch error:", err);
+                    console.warn('Webhook dispatch error:', err);
                 }
             }
 
-            showToast("Bilan Wellness envoyé avec succès! Merci.");
+            showToast('Bilan Wellness envoyé avec succès! Merci.');
             resetForm();
             renderDashboardTable();
         }
 
         function resetForm() {
             selectedScores = { q_sleep: 0, q_energy: 0, q_soreness: 0, q_stress: 0, q_nutrition: 0 };
-            document.querySelectorAll('.likert-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector('input[name="has_injury"][value="No"]').checked = true;
+            document.querySelectorAll('.likert-btn').forEach((btn) => btn.classList.remove('active'));
+            const noInjury = document.querySelector('input[name="has_injury"][value="No"]');
+            if (noInjury) noInjury.checked = true;
             toggleInjuryDetails(false);
+            const form = document.getElementById('wellness-form');
+            if (form) {
+                form.querySelector('#cycle-phase').value = 'Non renseigné';
+            }
         }
 
         function unlockCoachDashboard() {
-            const enteredPin = document.getElementById('input-pin').value;
+            const enteredPin = document.getElementById('input-pin')?.value || '';
             if (enteredPin === coachPin) {
-                document.getElementById('coach-lock-overlay').classList.add('hidden');
-                document.getElementById('coach-dashboard-content').classList.remove('hidden');
-                document.getElementById('pin-error-msg').classList.add('hidden');
+                document.getElementById('coach-lock-overlay')?.classList.add('hidden');
+                document.getElementById('coach-dashboard-content')?.classList.remove('hidden');
+                document.getElementById('pin-error-msg')?.classList.add('hidden');
                 renderDashboardTable();
             } else {
-                document.getElementById('pin-error-msg').classList.remove('hidden');
+                document.getElementById('pin-error-msg')?.classList.remove('hidden');
             }
         }
 
         function lockCoachDashboard() {
-            document.getElementById('coach-lock-overlay').classList.remove('hidden');
-            document.getElementById('coach-dashboard-content').classList.add('hidden');
-            document.getElementById('input-pin').value = '';
+            document.getElementById('coach-lock-overlay')?.classList.remove('hidden');
+            document.getElementById('coach-dashboard-content')?.classList.add('hidden');
+            const pinInput = document.getElementById('input-pin');
+            if (pinInput) pinInput.value = '';
         }
 
         function changeCoachPin() {
-            const newPin = prompt("Entrez le nouveau code PIN Coach (4 à 6 chiffres):", coachPin);
+            const newPin = prompt('Entrez le nouveau code PIN Coach (4 à 6 chiffres):', coachPin);
             if (newPin && newPin.trim().length >= 4) {
                 coachPin = newPin.trim();
-                localStorage.setItem('blonay_coach_pin', coachPin);
-                showToast("Code PIN modifié avec succès!");
+                safeSetText('blonay_coach_pin', coachPin);
+                showToast('Code PIN modifié avec succès!');
             }
         }
 
         function saveScriptUrl() {
-            const url = document.getElementById('input-script-url').value.trim();
+            const url = document.getElementById('input-script-url')?.value.trim() || '';
             scriptUrl = url;
-            localStorage.setItem('blonay_script_url', scriptUrl);
-            showToast("URL de synchronisation enregistrée!");
+            safeSetText('blonay_script_url', scriptUrl);
+            showToast('URL de synchronisation enregistrée!');
         }
 
-        window.mergeCloudSubmissions = function(cloudData) {
-            const existingIds = new Set(submissions.map(s => s.id));
+        function normalizeSubmission(sub) {
+            if (!sub || typeof sub !== 'object') return null;
+            const scores = sub.scores || {};
+            const normalizedScores = {
+                q_sleep: Number(scores.q_sleep ?? 0),
+                q_energy: Number(scores.q_energy ?? 0),
+                q_soreness: Number(scores.q_soreness ?? 0),
+                q_stress: Number(scores.q_stress ?? 0),
+                q_nutrition: Number(scores.q_nutrition ?? 0)
+            };
+            const calculatedTotal = Object.values(normalizedScores).reduce((acc, val) => acc + val, 0);
+            return {
+                id: sub.id || sub.cloudId || ('sub_' + Math.random().toString(36).slice(2)),
+                cloudId: sub.cloudId || null,
+                date: sub.date || '',
+                team: sub.team || '',
+                player: sub.player || '',
+                scores: normalizedScores,
+                totalScore: Number(sub.totalScore ?? calculatedTotal),
+                injury: sub.injury && typeof sub.injury === 'object' ? sub.injury : null,
+                cycle: sub.cycle || 'Non renseigné',
+                timestamp: sub.timestamp || sub.date || new Date().toISOString()
+            };
+        }
+
+        window.mergeCloudSubmissions = function (cloudData) {
+            const normalizedExisting = submissions.map(normalizeSubmission).filter(Boolean);
+            const existingKeys = new Set(normalizedExisting.map((s) => s.cloudId || s.id));
             let added = 0;
-            cloudData.forEach(item => {
-                if (!existingIds.has(item.id)) {
-                    submissions.push(item);
+
+            cloudData.forEach((item) => {
+                const normalized = normalizeSubmission(item);
+                if (!normalized) return;
+                const key = normalized.cloudId || normalized.id;
+                if (!existingKeys.has(key)) {
+                    normalizedExisting.push(normalized);
+                    existingKeys.add(key);
                     added++;
                 }
             });
+
             if (added > 0) {
-                submissions.sort((a,b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
-                localStorage.setItem('blonay_submissions', JSON.stringify(submissions));
+                normalizedExisting.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                submissions = normalizedExisting;
+                safeSetJSON('blonay_submissions', submissions);
                 renderDashboardTable();
             }
         };
 
         function renderDashboardTable() {
-            const filterTeam = document.getElementById('filter-team').value;
+            const filterEl = document.getElementById('filter-team');
             const tbody = document.getElementById('table-submissions-body');
+            const totalEl = document.getElementById('stat-total-count');
+            const avgEl = document.getElementById('stat-avg-score');
+            const injuryEl = document.getElementById('stat-injuries-count');
+            const redEl = document.getElementById('stat-red-count');
+            if (!filterEl || !tbody || !totalEl || !avgEl || !injuryEl || !redEl) return;
+
+            const filterTeam = filterEl.value || 'ALL';
             tbody.innerHTML = '';
 
-            let filtered = submissions;
-            if (filterTeam !== 'ALL') {
-                filtered = submissions.filter(s => s.team === filterTeam);
-            }
+            const normalized = submissions.map(normalizeSubmission).filter(Boolean);
+            submissions = normalized;
 
-            // Calculate Metrics
+            let filtered = normalized;
+            if (filterTeam !== 'ALL') filtered = normalized.filter((s) => s.team === filterTeam);
+
             let totalScoreSum = 0;
             let injuriesCount = 0;
             let redCount = 0;
 
-            filtered.forEach(sub => {
+            filtered.forEach((sub) => {
                 totalScoreSum += sub.totalScore;
                 if (sub.injury) injuriesCount++;
                 if (sub.totalScore < 15) redCount++;
 
+                let badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+                if (sub.totalScore < 15) badgeColor = 'bg-red-500/20 text-red-400 border-red-500/30';
+                else if (sub.totalScore <= 19) badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-800/60 transition-all";
-
-                // Score Color Badge
-                let badgeColor = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-                if (sub.totalScore < 15) {
-                    badgeColor = "bg-red-500/20 text-red-400 border-red-500/30";
-                } else if (sub.totalScore <= 19) {
-                    badgeColor = "bg-amber-500/20 text-amber-400 border-amber-500/30";
-                }
-
+                tr.className = 'hover:bg-slate-800/60 transition-all';
                 tr.innerHTML = `
-                    <td class="p-3 text-slate-300 font-mono text-[11px]">${sub.date}</td>
-                    <td class="p-3 font-bold text-white">${sub.player}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 border border-slate-700 text-slate-300">${sub.team}</span></td>
-                    <td class="p-3 text-center">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${badgeColor}">${sub.totalScore} / 25</span>
-                    </td>
-                    <td class="p-3 text-center text-[11px] text-slate-400 font-mono">
-                        ${sub.scores.q_sleep}-${sub.scores.q_energy}-${sub.scores.q_soreness}-${sub.scores.q_stress}-${sub.scores.q_nutrition}
-                    </td>
-                    <td class="p-3">
-                        ${sub.injury ? `<span class="text-amber-400 font-semibold flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> ${sub.injury.location} (${sub.injury.scale}/10)</span>` : '<span class="text-slate-500">Aucune</span>'}
-                    </td>
-                    <td class="p-3 text-slate-400 text-[11px]">${sub.cycle || 'Non renseigné'}</td>
+                    <td class="p-3 text-slate-300 font-mono text-[11px]">${escapeHTML(sub.date)}</td>
+                    <td class="p-3 font-bold text-white">${escapeHTML(sub.player)}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 border border-slate-700 text-slate-300">${escapeHTML(sub.team)}</span></td>
+                    <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-bold border ${badgeColor}">${escapeHTML(sub.totalScore)} / 25</span></td>
+                    <td class="p-3 text-center text-[11px] text-slate-400 font-mono">${sub.scores.q_sleep}-${sub.scores.q_energy}-${sub.scores.q_soreness}-${sub.scores.q_stress}-${sub.scores.q_nutrition}</td>
+                    <td class="p-3">${sub.injury ? `<span class="text-amber-400 font-semibold flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHTML(sub.injury.location || 'Douleur')} (${escapeHTML(sub.injury.scale || '?')}/10)</span>` : '<span class="text-slate-500">Aucune</span>'}</td>
+                    <td class="p-3 text-slate-400 text-[11px]">${escapeHTML(sub.cycle || 'Non renseigné')}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('stat-total-count').textContent = filtered.length;
-            document.getElementById('stat-avg-score').textContent = filtered.length > 0 ? (totalScoreSum / filtered.length).toFixed(1) : '--';
-            document.getElementById('stat-injuries-count').textContent = injuriesCount;
-            document.getElementById('stat-red-count').textContent = redCount;
+            totalEl.textContent = String(filtered.length);
+            avgEl.textContent = filtered.length > 0 ? (totalScoreSum / filtered.length).toFixed(1) : '--';
+            injuryEl.textContent = String(injuriesCount);
+            redEl.textContent = String(redCount);
+            safeSetJSON('blonay_submissions', submissions);
         }
 
         function openManageRosterModal() {
-            document.getElementById('modal-roster').classList.remove('hidden');
+            document.getElementById('modal-roster')?.classList.remove('hidden');
         }
 
         function closeManageRosterModal() {
-            document.getElementById('modal-roster').classList.add('hidden');
+            document.getElementById('modal-roster')?.classList.add('hidden');
             updatePlayerDropdown();
         }
 
         function renderManageRosterLists() {
             const listU16 = document.getElementById('roster-list-u16');
             const listU18 = document.getElementById('roster-list-u18');
+            if (!listU16 || !listU18) return;
 
             listU16.innerHTML = '';
             listU18.innerHTML = '';
-
-            (currentRosters.U16 || []).forEach(name => {
-                listU16.appendChild(createRosterItemHTML('U16', name));
-            });
-
-            (currentRosters.U18 || []).forEach(name => {
-                listU18.appendChild(createRosterItemHTML('U18', name));
-            });
+            (currentRosters.U16 || []).forEach((name) => listU16.appendChild(createRosterItemHTML('U16', name)));
+            (currentRosters.U18 || []).forEach((name) => listU18.appendChild(createRosterItemHTML('U18', name)));
         }
 
         function createRosterItemHTML(team, name) {
             const div = document.createElement('div');
-            div.className = "flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-200";
-            div.innerHTML = `
-                <span>${name}</span>
-                <button onclick="removePlayer('${team}', '${name}')" class="text-red-400 hover:text-red-300">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            `;
+            div.className = 'flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-200 gap-2';
+
+            const span = document.createElement('span');
+            span.className = 'truncate';
+            span.textContent = name;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'text-red-400 hover:text-red-300 shrink-0';
+            button.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+            button.addEventListener('click', () => removePlayer(team, name));
+
+            div.appendChild(span);
+            div.appendChild(button);
             return div;
         }
 
         function addNewPlayer() {
-            const team = document.getElementById('new-player-team').value;
+            const team = document.getElementById('new-player-team')?.value || 'U16';
             const input = document.getElementById('new-player-name');
-            const name = input.value.trim();
+            const name = input?.value.trim() || '';
+            if (!name) return;
 
-            if (name) {
-                if (!currentRosters[team]) currentRosters[team] = [];
+            if (!Array.isArray(currentRosters[team])) currentRosters[team] = [];
+            if (!currentRosters[team].includes(name)) {
                 currentRosters[team].push(name);
-                localStorage.setItem('blonay_rosters', JSON.stringify(currentRosters));
-                input.value = '';
+                safeSetJSON('blonay_rosters', currentRosters);
+                if (input) input.value = '';
                 renderManageRosterLists();
+                updatePlayerDropdown();
                 showToast(`${name} ajoutée à l'équipe ${team}`);
+            } else {
+                showToast('Cette joueuse existe déjà.', 'error');
             }
         }
 
         function removePlayer(team, name) {
-            currentRosters[team] = currentRosters[team].filter(n => n !== name);
-            localStorage.setItem('blonay_rosters', JSON.stringify(currentRosters));
+            if (!Array.isArray(currentRosters[team])) return;
+            currentRosters[team] = currentRosters[team].filter((n) => n !== name);
+            safeSetJSON('blonay_rosters', currentRosters);
             renderManageRosterLists();
+            updatePlayerDropdown();
             showToast(`${name} retirée de l'équipe ${team}`);
         }
 
         function exportToCSV() {
-            if (submissions.length === 0) {
-                showToast("Aucune donnée à exporter", "error");
+            if (!Array.isArray(submissions) || submissions.length === 0) {
+                showToast('Aucune donnée à exporter', 'error');
                 return;
             }
 
-            let csvContent = "data:text/csv;charset=utf-8,ID,Date,Equipe,Joueuse,ScoreTotal,Sommeil,Energie,Courbatures,Stress,Nutrition,GeneLocation,GeneEchelle,Cycle\n";
-            submissions.forEach(s => {
-                const row = [
-                    s.id, s.date, s.team, `"${s.player}"`, s.totalScore,
-                    s.scores.q_sleep, s.scores.q_energy, s.scores.q_soreness, s.scores.q_stress, s.scores.q_nutrition,
-                    s.injury ? `"${s.injury.location}"` : "Non", s.injury ? s.injury.scale : "0", `"${s.cycle}"`
-                ].join(",");
-                csvContent += row + "\n";
+            const rows = [
+                ['ID', 'Date', 'Equipe', 'Joueuse', 'ScoreTotal', 'Sommeil', 'Energie', 'Courbatures', 'Stress', 'Nutrition', 'GeneLocation', 'GeneEchelle', 'Cycle']
+            ];
+
+            submissions.map(normalizeSubmission).filter(Boolean).forEach((s) => {
+                rows.push([
+                    s.id,
+                    s.date,
+                    s.team,
+                    s.player,
+                    s.totalScore,
+                    s.scores.q_sleep,
+                    s.scores.q_energy,
+                    s.scores.q_soreness,
+                    s.scores.q_stress,
+                    s.scores.q_nutrition,
+                    s.injury ? s.injury.location : 'Non',
+                    s.injury ? s.injury.scale : '0',
+                    s.cycle || 'Non renseigné'
+                ]);
             });
 
+            const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((row) => row.map(csvEscape).join(',')).join('\n');
             const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Blonay_Wellness_Export_${new Date().toISOString().slice(0,10)}.csv`);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `Blonay_Wellness_Export_${new Date().toISOString().slice(0, 10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        function showToast(msg, type = "success") {
+        function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
+            if (!toast || !toastMsg) return;
             toastMsg.textContent = msg;
-
-            if (type === "error") {
-                toast.className = "fixed bottom-5 right-5 z-50 bg-red-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 font-semibold text-sm transition-all duration-300";
+            if (type === 'error') {
+                toast.className = 'fixed bottom-5 right-5 z-50 bg-red-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 font-semibold text-sm transition-all duration-300';
             } else {
-                toast.className = "fixed bottom-5 right-5 z-50 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 font-semibold text-sm transition-all duration-300";
+                toast.className = 'fixed bottom-5 right-5 z-50 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 font-semibold text-sm transition-all duration-300';
             }
-
             toast.classList.remove('translate-y-20', 'opacity-0');
             setTimeout(() => {
                 toast.classList.add('translate-y-20', 'opacity-0');
             }, 3000);
         }
+
+        window.onload = function () {
+            try {
+                const dateInput = document.getElementById('input-date');
+                if (dateInput) dateInput.valueAsDate = new Date();
+                updatePlayerDropdown();
+                renderManageRosterLists();
+                const scriptInput = document.getElementById('input-script-url');
+                if (scriptInput && scriptUrl) scriptInput.value = scriptUrl;
+                renderDashboardTable();
+            } catch (err) {
+                console.error('Erro na inicialização da app:', err);
+            }
+        };
     </script>
 </body>
 </html>
